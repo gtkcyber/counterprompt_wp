@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main, build-core]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: PHPCS (WordPress Coding Standards)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'
+          tools: composer
+          coverage: none
+
+      - name: Install Composer dev dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Run PHPCS
+        run: vendor/bin/phpcs
+
+  test:
+    name: PHPUnit (wp-env, WordPress ${{ matrix.wp }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Test against the minimum supported WordPress and the latest.
+        wp: ['6.3', 'latest']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Pin WordPress version for this matrix leg
+        if: matrix.wp != 'latest'
+        run: |
+          # Override the core version wp-env boots without editing the committed .wp-env.json.
+          echo '{ "core": "WordPress/WordPress#${{ matrix.wp }}" }' > .wp-env.override.json
+
+      - name: Start wp-env
+        run: npx wp-env start
+
+      - name: Install PHP dev dependencies (inside tests container)
+        run: npm run setup
+
+      - name: Run PHPUnit
+        run: npm run test:php
+
+      - name: Plugin Check (informational)
+        continue-on-error: true
+        run: |
+          npx wp-env run cli wp plugin install plugin-check --activate
+          npm run check
+
+      - name: wp-env debug logs on failure
+        if: failure()
+        run: npx wp-env logs --watch=false || true
