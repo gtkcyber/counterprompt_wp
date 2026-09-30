@@ -4,11 +4,12 @@ defined( 'ABSPATH' ) || exit;
 class Counterprompt_Rest {
 
 	public static function boot(): void {
-		add_filter( 'rest_post_dispatch', [ __CLASS__, 'apply' ], 10, 2 );
+		// WordPress passes ($result, $server, $request); adapt to apply( $result, $request ).
+		add_filter( 'rest_post_dispatch', function ( $r, $s, $req ) { return self::apply( $r, $req ); }, 10, 3 );
 	}
 
 	public static function is_users_route( WP_REST_Request $r ): bool {
-		return str_starts_with( $r->get_route(), '/wp/v2/users' );
+		return (bool) preg_match( '#^/wp/v2/users/?$#', $r->get_route() );
 	}
 
 	public static function apply( $result, $request ) {
@@ -26,7 +27,7 @@ class Counterprompt_Rest {
 		$data  = $result->get_data();
 
 		// Nondeterminism: users enumeration.
-		if ( $request instanceof WP_REST_Request && self::is_users_route( $request ) && Counterprompt_Leaks::roll() ) {
+		if ( $request instanceof WP_REST_Request && ! $result->is_error() && self::is_users_route( $request ) && Counterprompt_Leaks::roll() ) {
 			Counterprompt_Log::record( 'leak_suppressed', $route, [ 'kind' => 'rest_users' ] );
 			$result->set_data( [] );
 			$result->header( 'Cache-Control', 'no-store' );
