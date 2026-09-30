@@ -23,6 +23,11 @@ class Counterprompt_Detector {
 		return $remote;
 	}
 
+	/** True when a proxy misconfiguration makes per-IP techniques unsafe (every visitor looks like one IP). */
+	public static function per_ip_suspended(): bool {
+		return Counterprompt_Admin::proxy_misconfigured();
+	}
+
 	public static function ip_hash( string $ip ): string {
 		return hash_hmac( 'sha256', $ip, wp_salt( 'auth' ) );
 	}

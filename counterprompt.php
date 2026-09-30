@@ -27,6 +27,7 @@ require_once COUNTERPROMPT_DIR . 'includes/class-traps.php';
 require_once COUNTERPROMPT_DIR . 'includes/class-leaks.php';
 require_once COUNTERPROMPT_DIR . 'includes/class-server-rules.php';
 require_once COUNTERPROMPT_DIR . 'includes/class-rest.php';
+require_once COUNTERPROMPT_DIR . 'includes/class-admin.php';
 
 register_activation_hook( COUNTERPROMPT_FILE, function () {
 	Counterprompt_Log::install();
@@ -45,4 +46,7 @@ add_action( 'plugins_loaded', function () {
 	Counterprompt_Leaks::boot();
 	Counterprompt_Server_Rules::boot();
 	Counterprompt_Rest::boot();
+	if ( is_admin() ) {
+		Counterprompt_Admin::register();
+	}
 } );

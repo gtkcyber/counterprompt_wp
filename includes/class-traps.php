@@ -44,9 +44,13 @@ class Counterprompt_Traps {
 		if ( ! Counterprompt_Detector::is_exempt() ) {
 			$ip  = Counterprompt_Detector::client_ip(); // Validated source only; never a path-derived value.
 			$was = Counterprompt_Detector::is_flagged( $ip );
-			Counterprompt_Detector::flag( $ip );
+			// Proxy misconfigured: every visitor looks like one IP, so flagging would hit everyone. Log only.
+			$suspended = Counterprompt_Detector::per_ip_suspended();
+			if ( ! $suspended ) {
+				Counterprompt_Detector::flag( $ip );
+			}
 			Counterprompt_Log::record( 'trap_hit', $path );
-			if ( ! $was ) {
+			if ( ! $was && ! $suspended ) {
 				Counterprompt_Log::record( 'flagged', $path );
 				do_action( 'counterprompt_ip_flagged', Counterprompt_Detector::ip_hash( $ip ), $path );
 			}

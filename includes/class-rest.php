@@ -22,6 +22,9 @@ class Counterprompt_Rest {
 		if ( Counterprompt_Detector::is_exempt() || ! Counterprompt_Detector::is_flagged() ) {
 			return $result;
 		}
+		if ( Counterprompt_Detector::per_ip_suspended() ) {
+			return $result; // Proxy misconfigured: leave the response untouched.
+		}
 
 		$route = $request instanceof WP_REST_Request ? $request->get_route() : '';
 		$data  = $result->get_data();

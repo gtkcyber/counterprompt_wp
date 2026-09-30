@@ -40,6 +40,11 @@ class Counterprompt_Leaks {
 			return;
 		}
 
+		// Proxy misconfigured: skip both enum flagging and suppression (suspending is the safe direction).
+		if ( Counterprompt_Detector::per_ip_suspended() ) {
+			return;
+		}
+
 		if ( $is_author ) {
 			self::maybe_flag_on_enum();
 		}
