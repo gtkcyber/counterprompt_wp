@@ -42,6 +42,7 @@ Core's only obligation to Pro/service is the stable hook set (spec §8). No stub
 
 ```bash
 npm run start       # wp-env: dev site :8888, test site :8889 (needs Docker)
+npm run setup       # one-time after start: composer install (PHPUnit + polyfills) in tests-cli
 npm run test:php    # PHPUnit via the WP test library
 npm run test:smoke  # black-box curl checks against :8888
 npm run lint        # PHPCS (WordPress Coding Standards)

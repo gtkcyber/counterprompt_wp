@@ -1,10 +1,12 @@
 {
 	"name": "counterprompt",
 	"private": true,
+	"//": "One-time after npm run start: npm run setup (installs PHPUnit + polyfills into gitignored vendor/ inside tests-cli).",
 	"scripts": {
 		"start": "wp-env start",
 		"stop": "wp-env stop",
-		"test:php": "wp-env run tests-cli --env-cwd=wp-content/plugins/counterprompt vendor/bin/phpunit || wp-env run tests-cli phpunit -c wp-content/plugins/counterprompt/phpunit.xml.dist",
+		"setup": "wp-env run tests-cli --env-cwd=wp-content/plugins/counterprompt composer install",
+		"test:php": "wp-env run tests-cli --env-cwd=wp-content/plugins/counterprompt vendor/bin/phpunit",
 		"test:smoke": "bash tests/smoke.sh",
 		"lint": "wp-env run cli --env-cwd=wp-content/plugins/counterprompt phpcs",
 		"check": "npm run lint && wp-env run cli wp plugin-check counterprompt"

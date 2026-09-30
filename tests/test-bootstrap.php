@@ -5,7 +5,7 @@ class Test_Bootstrap extends WP_UnitTestCase {
 		$this->assertTrue( defined( 'COUNTERPROMPT_DIR' ) );
 		$this->assertStringEndsWith( '/', COUNTERPROMPT_DIR );
 	}
-	public function test_plugin_is_active() {
+	public function test_settings_class_loaded() {
 		$this->assertTrue( class_exists( 'Counterprompt_Settings' ) );
 	}
 }
