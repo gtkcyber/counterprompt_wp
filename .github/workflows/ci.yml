@@ -65,7 +65,8 @@ jobs:
         run: npm ci
 
       - name: Pin WordPress version for this matrix leg
-        run: echo '{ "core": "WordPress/WordPress#${{ matrix.wp }}" }' > .wp-env.override.json
+        run: |
+          echo '{ "core": "WordPress/WordPress#${{ matrix.wp }}" }' > .wp-env.override.json
 
       - name: Start wp-env
         run: npx wp-env start
