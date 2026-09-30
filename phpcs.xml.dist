@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<ruleset name="Counterprompt">
+	<description>WordPress Coding Standards for Counterprompt.</description>
+	<file>.</file>
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/docs/*</exclude-pattern>
+	<exclude-pattern>*/tests/*</exclude-pattern>
+	<exclude-pattern>*/.superpowers/*</exclude-pattern>
+	<arg name="extensions" value="php"/>
+	<arg name="colors"/>
+	<arg value="ps"/>
+	<config name="testVersion" value="8.0-"/>
+	<config name="minimum_wp_version" value="6.3"/>
+	<rule ref="WordPress">
+		<!-- Pragmatic exclusions: docblock-only and cosmetic sniffs. Security, escaping, yoda, prefix and i18n sniffs stay on. -->
+		<exclude name="Squiz.Commenting.FileComment"/>
+		<exclude name="Squiz.Commenting.ClassComment"/>
+		<exclude name="Squiz.Commenting.FunctionComment"/>
+		<exclude name="Squiz.Commenting.VariableComment"/>
+		<exclude name="Squiz.Commenting.InlineComment"/>
+		<exclude name="Generic.Commenting.DocComment"/>
+		<!-- Files are named class-detector.php etc. by project convention (CLAUDE.md). -->
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+		<exclude name="WordPress.Files.FileName.NotHyphenatedLowercase"/>
+	</rule>
+	<rule ref="PHPCompatibilityWP"/>
+	<rule ref="WordPress.WP.I18n">
+		<properties><property name="text_domain" type="array"><element value="counterprompt"/></property></properties>
+	</rule>
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties><property name="prefixes" type="array"><element value="counterprompt"/><element value="Counterprompt"/><element value="COUNTERPROMPT"/></property></properties>
+	</rule>
+</ruleset>

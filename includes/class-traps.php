@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 class Counterprompt_Traps {
 
 	public static function boot(): void {
-		add_action( 'parse_request', [ __CLASS__, 'handle' ], 0 );
+		add_action( 'parse_request', array( __CLASS__, 'handle' ), 0 );
 	}
 
 	public static function trap_paths(): array {
@@ -28,7 +28,10 @@ class Counterprompt_Traps {
 	}
 
 	public static function current_path(): string {
-		$uri = wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH ) ?: '/'; // phpcs:ignore WordPress.Security
+		$uri = wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '/', PHP_URL_PATH ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- parsed, never output.
+		if ( ! $uri ) {
+			$uri = '/';
+		}
 		return '/' . trim( $uri, '/' );
 	}
 

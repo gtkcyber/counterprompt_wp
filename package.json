@@ -1,15 +1,15 @@
 {
 	"name": "counterprompt",
 	"private": true,
-	"//": "One-time after npm run start: npm run setup (installs PHPUnit + polyfills into gitignored vendor/ inside tests-cli).",
+	"//": "For npm run check, Plugin Check must be installed once: npx wp-env run cli wp plugin install plugin-check --activate. One-time after npm run start: npm run setup (installs PHPUnit + polyfills into gitignored vendor/ inside tests-cli).",
 	"scripts": {
 		"start": "wp-env start",
 		"stop": "wp-env stop",
 		"setup": "wp-env run tests-cli --env-cwd=wp-content/plugins/counterprompt composer install",
 		"test:php": "wp-env run tests-cli --env-cwd=wp-content/plugins/counterprompt vendor/bin/phpunit",
 		"test:smoke": "bash tests/smoke.sh",
-		"lint": "wp-env run cli --env-cwd=wp-content/plugins/counterprompt phpcs",
-		"check": "npm run lint && wp-env run cli wp plugin-check counterprompt"
+		"lint": "wp-env run tests-cli --env-cwd=wp-content/plugins/counterprompt vendor/bin/phpcs",
+		"check": "npm run lint && wp-env run cli wp plugin check counterprompt --exclude-directories=tests,vendor,node_modules,docs,.superpowers --exclude-files=CLAUDE.md,composer.json,composer.lock,package.json,package-lock.json,phpcs.xml.dist,phpunit.xml.dist,.gitignore,.wp-env.json,.phpunit.result.cache"
 	},
 	"devDependencies": { "@wordpress/env": "^10.0.0" }
 }

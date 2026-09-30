@@ -4,11 +4,11 @@ defined( 'ABSPATH' ) || exit;
 class Counterprompt_Leaks {
 
 	public static function boot(): void {
-		add_action( 'template_redirect', [ __CLASS__, 'handle' ], 0 );
+		add_action( 'template_redirect', array( __CLASS__, 'handle' ), 0 );
 	}
 
 	public static function roll(): bool {
-		return ( mt_rand() / mt_getrandmax() ) < (float) Counterprompt_Settings::instance()->get( 'nd_probability' );
+		return ( wp_rand( 0, 999999 ) / 1000000 ) < (float) Counterprompt_Settings::instance()->get( 'nd_probability' );
 	}
 
 	/** True when this client is flagged and not exempt, i.e. its leaks may be suppressed. Never true for normal visitors. */
@@ -23,7 +23,7 @@ class Counterprompt_Leaks {
 	}
 
 	public static function is_fingerprint_path( string $path ): bool {
-		if ( in_array( $path, [ '/readme.html', '/license.txt' ], true ) ) {
+		if ( in_array( $path, array( '/readme.html', '/license.txt' ), true ) ) {
 			return true;
 		}
 		return (bool) preg_match( '#^/wp-content/(plugins|themes)/[^/]+/readme\.txt$#', $path );
@@ -34,7 +34,7 @@ class Counterprompt_Leaks {
 			return;
 		}
 		$path      = Counterprompt_Traps::current_path();
-		$is_author = isset( $_GET['author'] ) && ctype_digit( (string) $_GET['author'] ); // phpcs:ignore WordPress.Security.NonceVerification
+		$is_author = isset( $_GET['author'] ) && ctype_digit( sanitize_text_field( wp_unslash( $_GET['author'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
 		$is_fp     = self::is_fingerprint_path( $path );
 		if ( ! $is_author && ! $is_fp ) {
 			return;
@@ -50,7 +50,7 @@ class Counterprompt_Leaks {
 		}
 
 		if ( self::should_suppress_author() && self::roll() ) {
-			Counterprompt_Log::record( 'leak_suppressed', $path, [ 'kind' => $is_author ? 'author' : 'fingerprint' ] );
+			Counterprompt_Log::record( 'leak_suppressed', $path, array( 'kind' => $is_author ? 'author' : 'fingerprint' ) );
 			global $wp_query;
 			if ( $wp_query instanceof WP_Query ) {
 				$wp_query->set_404();

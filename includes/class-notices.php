@@ -4,19 +4,36 @@ defined( 'ABSPATH' ) || exit;
 class Counterprompt_Notices {
 
 	public static function boot(): void {
-		add_action( 'wp_footer', function () { echo self::footer_markup(); }, 99 ); // phpcs:ignore WordPress.Security.EscapeOutput
-		add_filter( 'robots_txt', [ __CLASS__, 'robots' ], 99 );
+		add_action(
+			'wp_footer',
+			function () {
+				echo self::footer_markup(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- markup is built and escaped in footer_markup().
+			},
+			99
+		); // phpcs:ignore WordPress.Security.EscapeOutput
+		add_filter( 'robots_txt', array( __CLASS__, 'robots' ), 99 );
 		remove_action( 'wp_head', 'wp_generator' );
 		add_filter( 'the_generator', '__return_empty_string' );
 	}
 
 	public static function build( string $context ): array {
 		$s       = Counterprompt_Settings::instance();
-		$notices = [ [ 'source' => 'attribution', 'text' => $s->get( 'notice_attribution' ) ] ];
+		$notices = array(
+			array(
+				'source' => 'attribution',
+				'text'   => $s->get( 'notice_attribution' ),
+			),
+		);
 		if ( 'stop' === $s->get( 'strategy' ) ) {
-			$notices[] = [ 'source' => 'stop', 'text' => $s->get( 'notice_stop' ) ];
+			$notices[] = array(
+				'source' => 'stop',
+				'text'   => $s->get( 'notice_stop' ),
+			);
 		} else {
-			$notices[] = [ 'source' => 'divert', 'text' => $s->get( 'notice_divert' ) ];
+			$notices[] = array(
+				'source' => 'divert',
+				'text'   => $s->get( 'notice_divert' ),
+			);
 		}
 		return (array) apply_filters( 'counterprompt_notices', $notices, $context );
 	}
