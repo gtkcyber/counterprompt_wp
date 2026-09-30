@@ -6,10 +6,16 @@ on:
   pull_request:
     branches: [main]
 
-# Cancel superseded runs on the same ref.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+# The npm scripts mount the plugin at wp-content/plugins/counterprompt, so the
+# working copy must live in a directory named exactly "counterprompt" (the repo
+# itself is counterprompt_wp). Every job checks out into that path and runs there.
+defaults:
+  run:
+    working-directory: counterprompt
 
 jobs:
   lint:
@@ -17,11 +23,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: counterprompt
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.0'
+          # Dev tooling (PHPUnit 9.6 and deps) requires PHP >= 8.1; PHPCS still
+          # checks the plugin's 8.0 compatibility via the ruleset's testVersion.
+          php-version: '8.2'
           tools: composer
           coverage: none
 
@@ -37,25 +47,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Test against the minimum supported WordPress and the latest.
-        wp: ['6.3', 'latest']
+        # Minimum supported WordPress and the current release line.
+        wp: ['6.3', '6.5']
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: counterprompt
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
+          cache-dependency-path: counterprompt/package-lock.json
 
       - name: Install JS dependencies
         run: npm ci
 
       - name: Pin WordPress version for this matrix leg
-        if: matrix.wp != 'latest'
-        run: |
-          # Override the core version wp-env boots without editing the committed .wp-env.json.
-          echo '{ "core": "WordPress/WordPress#${{ matrix.wp }}" }' > .wp-env.override.json
+        run: echo '{ "core": "WordPress/WordPress#${{ matrix.wp }}" }' > .wp-env.override.json
 
       - name: Start wp-env
         run: npx wp-env start
