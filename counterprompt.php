@@ -19,6 +19,7 @@ define( 'COUNTERPROMPT_FILE', __FILE__ );
 define( 'COUNTERPROMPT_DIR', plugin_dir_path( __FILE__ ) );
 
 // Modules are wired in later tasks. Kept as explicit requires (no autoloader).
+require_once COUNTERPROMPT_DIR . 'includes/class-detector.php';
 require_once COUNTERPROMPT_DIR . 'includes/class-settings.php';
 
 add_action( 'plugins_loaded', function () {

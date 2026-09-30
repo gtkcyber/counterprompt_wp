@@ -3,11 +3,21 @@ defined( 'ABSPATH' ) || exit;
 
 class Counterprompt_Settings {
 	const OPTION = 'counterprompt_options';
-	private static ?Counterprompt_Settings $instance = null;
 	private ?array $cache = null;
+	private static ?Counterprompt_Settings $instance = null;
 
 	public static function instance(): Counterprompt_Settings {
-		return self::$instance ??= new self();
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+			// Drop the memo whenever the option changes so get() never serves stale values.
+			$flush = static function () {
+				self::$instance->cache = null;
+			};
+			foreach ( [ 'add_option_', 'update_option_', 'delete_option_' ] as $p ) {
+				add_action( $p . self::OPTION, $flush );
+			}
+		}
+		return self::$instance;
 	}
 
 	public static function defaults(): array {
@@ -84,30 +94,11 @@ class Counterprompt_Settings {
 		$out   = [];
 		foreach ( $lines as $line ) {
 			$c = trim( (string) $line );
-			// Task 3: replace with Counterprompt_Detector::valid_cidr_or_ip().
-			if ( '' !== $c && $this->is_valid_cidr_or_ip( $c ) ) {
+			if ( '' !== $c && Counterprompt_Detector::valid_cidr_or_ip( $c ) ) {
 				$out[] = $c;
 			}
 		}
 		return array_values( array_unique( $out ) );
-	}
-
-	/** Temporary inline validator; Task 3 swaps in Counterprompt_Detector::valid_cidr_or_ip(). */
-	private function is_valid_cidr_or_ip( string $s ): bool {
-		if ( false === strpos( $s, '/' ) ) {
-			return false !== filter_var( $s, FILTER_VALIDATE_IP );
-		}
-		list( $ip, $bits ) = explode( '/', $s, 2 );
-		if ( ! ctype_digit( $bits ) ) {
-			return false;
-		}
-		if ( false !== filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
-			return (int) $bits <= 32;
-		}
-		if ( false !== filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
-			return (int) $bits <= 128;
-		}
-		return false;
 	}
 
 	private function clean_notice( $raw ): string {
