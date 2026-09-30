@@ -36,7 +36,7 @@ class Test_Server_Rules extends WP_UnitTestCase {
 		$this->assertTrue( Counterprompt_Traps::is_trap( '/.aws/credentials' ) );
 	}
 	public function test_bait_paths_not_in_robots() {
-		$this->assertStringNotContainsString( '.env', Counterprompt_Notices::robots( '' ) );
+		$this->assertStringNotContainsString( '.git/config', Counterprompt_Notices::robots( '' ) );
 	}
 	public function test_htaccess_write_remove_roundtrip() {
 		$file = ABSPATH . '.htaccess';
