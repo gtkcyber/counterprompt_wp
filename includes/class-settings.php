@@ -60,7 +60,7 @@ class Counterprompt_Settings {
 		$out['proxy_header'] = in_array( $ph, [ '', 'CF-Connecting-IP', 'X-Forwarded-For' ], true ) ? $ph : '';
 
 		foreach ( [ 'notice_divert', 'notice_stop', 'notice_attribution' ] as $k ) {
-			$out[ $k ] = $this->clean_notice( (string) ( $input[ $k ] ?? $d[ $k ] ) );
+			$out[ $k ] = $this->clean_notice( $input[ $k ] ?? $d[ $k ] );
 		}
 
 		$this->cache = null;
@@ -110,10 +110,13 @@ class Counterprompt_Settings {
 		return false;
 	}
 
-	private function clean_notice( string $raw ): string {
-		$t = sanitize_textarea_field( $raw );
-		$t = str_replace( '--', '', $t );          // would break the HTML comment
-		$t = str_ireplace( [ '</body', '<body' ], '', $t );
+	private function clean_notice( $raw ): string {
+		$t = sanitize_textarea_field( is_scalar( $raw ) ? (string) $raw : '' );
+		do {
+			$prev = $t;
+			$t    = str_replace( '--', '', $t );   // would break the HTML comment
+			$t    = str_ireplace( [ '</body', '<body' ], '', $t );
+		} while ( $t !== $prev );
 		return $t;
 	}
 }
