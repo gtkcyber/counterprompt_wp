@@ -21,6 +21,18 @@ define( 'COUNTERPROMPT_DIR', plugin_dir_path( __FILE__ ) );
 // Modules are wired in later tasks. Kept as explicit requires (no autoloader).
 require_once COUNTERPROMPT_DIR . 'includes/class-detector.php';
 require_once COUNTERPROMPT_DIR . 'includes/class-settings.php';
+require_once COUNTERPROMPT_DIR . 'includes/class-log.php';
+
+register_activation_hook( COUNTERPROMPT_FILE, function () {
+	Counterprompt_Log::install();
+	if ( ! wp_next_scheduled( 'counterprompt_daily' ) ) {
+		wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'counterprompt_daily' );
+	}
+} );
+register_deactivation_hook( COUNTERPROMPT_FILE, function () {
+	wp_clear_scheduled_hook( 'counterprompt_daily' );
+} );
+add_action( 'counterprompt_daily', [ 'Counterprompt_Log', 'prune' ] );
 
 add_action( 'plugins_loaded', function () {
 	Counterprompt_Settings::instance();
