@@ -42,18 +42,7 @@ class Counterprompt_Traps {
 		}
 
 		if ( ! Counterprompt_Detector::is_exempt() ) {
-			$ip  = Counterprompt_Detector::client_ip(); // Validated source only; never a path-derived value.
-			$was = Counterprompt_Detector::is_flagged( $ip );
-			// Proxy misconfigured: every visitor looks like one IP, so flagging would hit everyone. Log only.
-			$suspended = Counterprompt_Detector::per_ip_suspended();
-			if ( ! $suspended ) {
-				Counterprompt_Detector::flag( $ip );
-			}
-			Counterprompt_Log::record( 'trap_hit', $path );
-			if ( ! $was && ! $suspended ) {
-				Counterprompt_Log::record( 'flagged', $path );
-				do_action( 'counterprompt_ip_flagged', Counterprompt_Detector::ip_hash( $ip ), $path );
-			}
+			self::register_hit( $path );
 		}
 
 		nocache_headers();
@@ -63,6 +52,21 @@ class Counterprompt_Traps {
 		echo 'stop' === Counterprompt_Settings::instance()->get( 'strategy' )
 			? self::stop_html() : self::maze_html( $path ); // phpcs:ignore WordPress.Security.EscapeOutput
 		exit;
+	}
+
+	/** Log a trap hit and, unless per-IP techniques are suspended, flag the client IP. */
+	public static function register_hit( string $path ): void {
+		$ip        = Counterprompt_Detector::client_ip(); // Validated source only; never a path-derived value.
+		$was       = Counterprompt_Detector::is_flagged( $ip );
+		$suspended = Counterprompt_Detector::per_ip_suspended(); // Proxy misconfigured: flagging would hit everyone. Log only.
+		if ( ! $suspended ) {
+			Counterprompt_Detector::flag( $ip );
+		}
+		Counterprompt_Log::record( 'trap_hit', $path );
+		if ( ! $was && ! $suspended ) {
+			Counterprompt_Log::record( 'flagged', $path );
+			do_action( 'counterprompt_ip_flagged', Counterprompt_Detector::ip_hash( $ip ), $path );
+		}
 	}
 
 	public static function maze_html( string $base ): string {

@@ -1,5 +1,44 @@
 <?php
 class Test_Admin extends WP_UnitTestCase {
+	public function set_up(): void { parent::set_up(); delete_transient( 'cp_proxy_mis' ); }
+
+	private function seed_cf_events(): void {
+		update_option( 'counterprompt_options', [ 'proxy_header' => '', 'enum_is_trap' => true, 'trap_paths' => [ '/db-backup/' ] ] );
+		Counterprompt_Settings::instance()->sanitize( [] );
+		Counterprompt_Log::install();
+		global $wpdb;
+		for ( $i = 0; $i < 5; $i++ ) {
+			$wpdb->insert( Counterprompt_Log::table(), [ 'ts' => gmdate('Y-m-d H:i:s'), 'event' => 'trap_hit', 'ip_hash' => str_repeat('a',64), 'ip_trunc' => '162.158.7.0', 'path' => '/x' . $i ] );
+		}
+		delete_transient( 'cp_proxy_mis' );
+		$_SERVER['REMOTE_ADDR'] = '162.158.7.9';
+	}
+	public function test_full_cloudflare_and_ipv6_ranges_match() {
+		$this->assertTrue( Counterprompt_Detector::ip_in_cidrs( '162.158.7.0', Counterprompt_Admin::PROXY_RANGES ) );
+		$this->assertTrue( Counterprompt_Detector::ip_in_cidrs( Counterprompt_Detector::ip_trunc( '2606:4700:1234:5678::1' ), Counterprompt_Admin::PROXY_RANGES ) );
+		$this->assertTrue( Counterprompt_Detector::ip_in_cidrs( '172.20.1.0', Counterprompt_Admin::PROXY_RANGES ) );
+		$this->assertFalse( Counterprompt_Detector::ip_in_cidrs( '8.8.8.0', Counterprompt_Admin::PROXY_RANGES ) );
+	}
+	public function test_trap_hit_does_not_flag_when_suspended() {
+		$this->seed_cf_events();
+		$this->assertTrue( Counterprompt_Detector::per_ip_suspended() );
+		Counterprompt_Traps::register_hit( '/db-backup/' );
+		$this->assertFalse( Counterprompt_Detector::is_flagged( '162.158.7.9' ) );
+	}
+	public function test_trap_hit_flags_when_not_suspended() {
+		update_option( 'counterprompt_options', [ 'proxy_header' => '' ] );
+		Counterprompt_Settings::instance()->sanitize( [] );
+		$_SERVER['REMOTE_ADDR'] = '203.0.113.50';
+		Counterprompt_Traps::register_hit( '/db-backup/' );
+		$this->assertTrue( Counterprompt_Detector::is_flagged( '203.0.113.50' ) );
+	}
+	public function test_leaks_do_not_flag_or_suppress_when_suspended() {
+		$this->seed_cf_events();
+		$_GET['author'] = '1';
+		Counterprompt_Leaks::handle(); // Would exit on suppression; reaching the next line proves it returned.
+		unset( $_GET['author'] );
+		$this->assertFalse( Counterprompt_Detector::is_flagged( '162.158.7.9' ) );
+	}
 	public function test_settings_registered() {
 		// Firing the real admin_init also runs core handlers that send headers under PHPUnit, so call settings() directly.
 		Counterprompt_Admin::register();
@@ -29,6 +68,7 @@ class Test_Admin extends WP_UnitTestCase {
 	}
 	public function test_not_misconfigured_with_too_few_events() {
 		update_option( 'counterprompt_options', [ 'proxy_header' => '' ] );
+		Counterprompt_Settings::instance()->sanitize( [] );
 		Counterprompt_Log::install();
 		global $wpdb;
 		$wpdb->insert( Counterprompt_Log::table(), [ 'ts' => gmdate('Y-m-d H:i:s'), 'event' => 'trap_hit', 'ip_hash' => str_repeat('a',64), 'ip_trunc' => '173.245.48.0', 'path' => '/x' ] );
@@ -36,6 +76,7 @@ class Test_Admin extends WP_UnitTestCase {
 	}
 	public function test_not_misconfigured_when_sources_are_public_and_varied() {
 		update_option( 'counterprompt_options', [ 'proxy_header' => '' ] );
+		Counterprompt_Settings::instance()->sanitize( [] );
 		Counterprompt_Log::install();
 		global $wpdb;
 		for ( $i = 0; $i < 6; $i++ ) {
@@ -45,6 +86,7 @@ class Test_Admin extends WP_UnitTestCase {
 	}
 	public function test_suspended_when_private_source_dominates() {
 		update_option( 'counterprompt_options', [ 'proxy_header' => '' ] );
+		Counterprompt_Settings::instance()->sanitize( [] );
 		Counterprompt_Log::install();
 		global $wpdb;
 		for ( $i = 0; $i < 5; $i++ ) {
@@ -54,6 +96,7 @@ class Test_Admin extends WP_UnitTestCase {
 	}
 	public function test_rest_untouched_when_suspended() {
 		update_option( 'counterprompt_options', [ 'proxy_header' => '' ] );
+		Counterprompt_Settings::instance()->sanitize( [] );
 		Counterprompt_Log::install();
 		global $wpdb;
 		for ( $i = 0; $i < 5; $i++ ) {

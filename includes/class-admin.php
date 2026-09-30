@@ -4,7 +4,15 @@ defined( 'ABSPATH' ) || exit;
 class Counterprompt_Admin {
 	// Known Cloudflare + private ranges: if traffic appears to originate here with no trusted
 	// header set, every visitor collapses to one IP and flagging would hit everyone.
-	const PROXY_RANGES = [ '173.245.48.0/20', '103.21.244.0/22', '104.16.0.0/13', '108.162.192.0/18', '172.64.0.0/13', '10.0.0.0/8', '192.168.0.0/16', '127.0.0.0/8' ];
+	const PROXY_RANGES = [
+		// Cloudflare IPv4.
+		'173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
+		'197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+		// Cloudflare IPv6.
+		'2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32', '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32',
+		// Private and loopback.
+		'10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '127.0.0.0/8', '::1/128',
+	];
 
 	public static function register(): void {
 		add_action( 'admin_menu', [ __CLASS__, 'menu' ] );
@@ -97,17 +105,24 @@ class Counterprompt_Admin {
 		if ( Counterprompt_Settings::instance()->get( 'proxy_header' ) ) {
 			return false;
 		}
+		// The trusted-header check above is uncached so a settings change takes effect at once; only the DB scan is cached.
+		$cached = get_transient( 'cp_proxy_mis' );
+		if ( false !== $cached ) {
+			return '1' === $cached;
+		}
 		$rows = Counterprompt_Log::recent( 20 );
-		if ( count( $rows ) < 5 ) {
-			return false;
-		}
-		$hits = 0;
-		foreach ( $rows as $r ) {
-			if ( Counterprompt_Detector::ip_in_cidrs( (string) $r['ip_trunc'], self::PROXY_RANGES ) ) {
-				$hits++;
+		$mis  = false;
+		if ( count( $rows ) >= 5 ) {
+			$hits = 0;
+			foreach ( $rows as $r ) {
+				if ( Counterprompt_Detector::ip_in_cidrs( (string) $r['ip_trunc'], self::PROXY_RANGES ) ) {
+					$hits++;
+				}
 			}
+			$mis = $hits >= (int) ceil( count( $rows ) * 0.8 );
 		}
-		return $hits >= (int) ceil( count( $rows ) * 0.8 );
+		set_transient( 'cp_proxy_mis', $mis ? '1' : '0', 60 );
+		return $mis;
 	}
 
 	public static function render(): void {
