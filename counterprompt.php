@@ -22,6 +22,7 @@ define( 'COUNTERPROMPT_DIR', plugin_dir_path( __FILE__ ) );
 require_once COUNTERPROMPT_DIR . 'includes/class-detector.php';
 require_once COUNTERPROMPT_DIR . 'includes/class-settings.php';
 require_once COUNTERPROMPT_DIR . 'includes/class-log.php';
+require_once COUNTERPROMPT_DIR . 'includes/class-notices.php';
 
 register_activation_hook( COUNTERPROMPT_FILE, function () {
 	Counterprompt_Log::install();
