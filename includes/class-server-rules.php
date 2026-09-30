@@ -65,6 +65,8 @@ class Counterprompt_Server_Rules {
 	}
 
 	public static function boot(): void {
+		// Register bait paths as traps (filter only; robots.txt reads the setting, so they are not advertised).
+		add_filter( 'counterprompt_trap_paths', static fn( $p ) => array_merge( (array) $p, self::bait_paths() ) );
 		add_filter( 'query_vars', static fn( $v ) => array_merge( $v, [ 'counterprompt_trap' ] ) );
 		add_action( 'parse_request', [ __CLASS__, 'maybe_handle' ], 0 );
 	}

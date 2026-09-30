@@ -24,7 +24,40 @@ class Test_Server_Rules extends WP_UnitTestCase {
 			$this->assertSame( '', Counterprompt_Server_Rules::bait_path_from_request( $v ) );
 		}
 	}
-	public function test_remove_without_htaccess_is_true_and_write_roundtrip() {
-		$this->assertTrue( Counterprompt_Server_Rules::remove() || ! is_writable( ABSPATH ) );
+	public function set_up(): void {
+		parent::set_up();
+		if ( ! has_filter( 'counterprompt_trap_paths' ) ) {
+			Counterprompt_Server_Rules::boot();
+		}
+	}
+	public function test_bait_paths_are_registered_as_traps() {
+		$this->assertTrue( Counterprompt_Traps::is_trap( '/.env' ) );
+		$this->assertTrue( Counterprompt_Traps::is_trap( '/.git/config' ) );
+		$this->assertTrue( Counterprompt_Traps::is_trap( '/.aws/credentials' ) );
+	}
+	public function test_bait_paths_not_in_robots() {
+		$this->assertStringNotContainsString( '.env', Counterprompt_Notices::robots( '' ) );
+	}
+	public function test_htaccess_write_remove_roundtrip() {
+		$file = ABSPATH . '.htaccess';
+		if ( file_exists( $file ) || ! is_writable( ABSPATH ) ) {
+			$this->markTestSkipped( 'Will not touch an existing .htaccess / ABSPATH not writable.' );
+		}
+		try {
+			$this->assertTrue( Counterprompt_Server_Rules::write() );
+			$c = file_get_contents( $file );
+			$this->assertStringContainsString( '# BEGIN Counterprompt', $c );
+			$this->assertStringContainsString( 'RewriteRule', $c );
+			$this->assertTrue( Counterprompt_Server_Rules::remove() );
+			$this->assertStringNotContainsString( 'RewriteRule', (string) file_get_contents( $file ) );
+		} finally {
+			@unlink( $file );
+		}
+	}
+	public function test_remove_safe_when_htaccess_absent() {
+		if ( file_exists( ABSPATH . '.htaccess' ) ) {
+			$this->markTestSkipped( 'existing .htaccess' );
+		}
+		$this->assertTrue( Counterprompt_Server_Rules::remove() );
 	}
 }
