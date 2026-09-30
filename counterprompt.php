@@ -25,6 +25,7 @@ require_once COUNTERPROMPT_DIR . 'includes/class-log.php';
 require_once COUNTERPROMPT_DIR . 'includes/class-notices.php';
 require_once COUNTERPROMPT_DIR . 'includes/class-traps.php';
 require_once COUNTERPROMPT_DIR . 'includes/class-leaks.php';
+require_once COUNTERPROMPT_DIR . 'includes/class-rest.php';
 
 register_activation_hook( COUNTERPROMPT_FILE, function () {
 	Counterprompt_Log::install();
@@ -41,4 +42,5 @@ add_action( 'plugins_loaded', function () {
 	Counterprompt_Settings::instance();
 	Counterprompt_Traps::boot();
 	Counterprompt_Leaks::boot();
+	Counterprompt_Rest::boot();
 } );
