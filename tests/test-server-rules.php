@@ -60,4 +60,29 @@ class Test_Server_Rules extends WP_UnitTestCase {
 		}
 		$this->assertTrue( Counterprompt_Server_Rules::remove() );
 	}
+	public function test_toggle_only_acts_on_transition() {
+		set_transient( 'cp_rules_write_failed', 'x' );
+		Counterprompt_Server_Rules::on_update( [ 'server_rules_apache' => false ], [ 'server_rules_apache' => false ] );
+		$this->assertSame( 'x', get_transient( 'cp_rules_write_failed' ) ); // untouched: no transition.
+		Counterprompt_Server_Rules::on_update( [ 'server_rules_apache' => true ], [ 'server_rules_apache' => false ] );
+		$this->assertFalse( get_transient( 'cp_rules_write_failed' ) ); // remove() path ran.
+		$existed = file_exists( ABSPATH . '.htaccess' );
+		Counterprompt_Server_Rules::on_update( [], [ 'server_rules_apache' => true ] );
+		$this->assertContains( get_transient( 'cp_rules_write_failed' ), [ '0', '1' ] ); // write() path ran.
+		Counterprompt_Server_Rules::remove();
+		if ( ! $existed && file_exists( ABSPATH . '.htaccess' ) ) {
+			unlink( ABSPATH . '.htaccess' );
+		}
+	}
+	public function test_toggle_hooked_to_option_update() {
+		Counterprompt_Server_Rules::register_toggle();
+		$this->assertNotFalse( has_action( 'update_option_counterprompt_options', [ 'Counterprompt_Server_Rules', 'on_update' ] ) );
+	}
+	public function test_selftest_token_validation() {
+		$this->assertFalse( Counterprompt_Server_Rules::selftest_token_valid( '1' ) );
+		set_transient( 'cp_selftest_token', 'abc123', 60 );
+		$this->assertTrue( Counterprompt_Server_Rules::selftest_token_valid( 'abc123' ) );
+		$this->assertFalse( Counterprompt_Server_Rules::selftest_token_valid( 'nope' ) );
+		delete_transient( 'cp_selftest_token' );
+	}
 }

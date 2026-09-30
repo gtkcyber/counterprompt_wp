@@ -2,7 +2,7 @@
 Contributors: cgivre
 Tags: security, ai, bots, honeypot, crawler
 Requires at least: 6.3
-Tested up to: 6.5
+Tested up to: 6.8
 Requires PHP: 8.0
 Stable tag: 0.1.0
 License: GPLv2 or later
@@ -16,7 +16,7 @@ Counterprompt is a defensive plugin for sites you own. It makes automated AI att
 
 **Static layer (safe for page caches).** Every visitor gets the same output: a hidden HTML comment notice, a hidden honeypot link, and robots.txt Disallow entries pointing at bait paths.
 
-**Per-IP layer (never cached surfaces only).** Once a client requests a bait path that no human and no robots.txt-respecting crawler would visit, its IP is flagged for a limited time. For flagged IPs only, Counterprompt can serve a recursive maze of dead-end pages, probabilistically suppress the site's own version fingerprints and user enumeration responses, and optionally slow responses on the REST API.
+**Per-IP layer (never cached surfaces only).** Once a client requests a bait path that no human and no robots.txt-respecting crawler would visit, its IP is flagged for a limited time. For flagged IPs only, Counterprompt can serve a recursive maze of dead-end pages, probabilistically suppress the site's own version fingerprints and user enumeration responses, and optionally send decoy version headers.
 
 What it does not do: it never blocks or rate-limits external hosts, never reaches out to anyone, and never targets visitors by User-Agent or other identity. Only trap-hit behavior flags an IP.
 
@@ -34,9 +34,13 @@ Features:
 2. Activate it. Defaults work out of the box.
 3. Review the settings under Settings > Counterprompt. If you run behind a proxy or CDN, set the proxy header and trusted proxy ranges so client IPs are detected correctly.
 
-Developers: after `npm run start`, run `npm run setup` once to install the test and lint tooling.
+**Behind a CDN you must set the trusted proxy header and CIDRs.** Otherwise every visitor appears to share the CDN's IP. Counterprompt auto-suspends per-IP techniques when it detects this, but that is a safety net with a brief cold start: the first few trap hits can be affected before suspension engages.
 
 == Frequently Asked Questions ==
+
+= What are the requirements for the traps to work? =
+
+Honeypot traps need pretty permalinks, or the optional server rules. Otherwise your webserver may return 404 for trap paths before WordPress sees them.
 
 = Will this affect my human visitors? =
 
@@ -44,7 +48,7 @@ No. Per-IP techniques only fire after a client requests a honeypot path. Humans 
 
 = Does it send my data anywhere? =
 
-No. Core makes no outbound requests. The only request it makes is a loopback self-test to your own site URL.
+No. Core makes no outbound requests. The only request it makes is an optional loopback self-test to your own site URL, which you start from the settings page.
 
 = Can the enumeration setting flag a real person? =
 

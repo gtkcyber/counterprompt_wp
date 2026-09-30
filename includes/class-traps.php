@@ -32,7 +32,12 @@ class Counterprompt_Traps {
 		if ( ! $uri ) {
 			$uri = '/';
 		}
-		return '/' . trim( $uri, '/' );
+		$path = '/' . trim( $uri, '/' );
+		$home = untrailingslashit( (string) wp_parse_url( home_url(), PHP_URL_PATH ) );
+		if ( '' !== $home && ( $path === $home || str_starts_with( $path, $home . '/' ) ) ) {
+			$path = '/' . trim( substr( $path, strlen( $home ) ), '/' );
+		}
+		return $path;
 	}
 
 	public static function handle(): void {
@@ -42,6 +47,14 @@ class Counterprompt_Traps {
 		$path = self::current_path();
 		if ( ! self::is_trap( $path ) ) {
 			return;
+		}
+		// Admin self-test: a valid one-time token means no flagging, no logging.
+		if ( isset( $_GET['cp_selftest'] ) && Counterprompt_Server_Rules::selftest_token_valid( sanitize_text_field( wp_unslash( $_GET['cp_selftest'] ) ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- one-time transient token.
+			delete_transient( 'cp_selftest_token' );
+			nocache_headers();
+			header( 'X-Counterprompt-Selftest: 1' );
+			status_header( 200 );
+			exit;
 		}
 
 		if ( ! Counterprompt_Detector::is_exempt() ) {

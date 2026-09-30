@@ -21,4 +21,12 @@ class Test_Traps extends WP_UnitTestCase {
 	public function test_stop_html_has_no_children() {
 		$this->assertStringNotContainsString( '<li>', Counterprompt_Traps::stop_html() );
 	}
+	public function test_subdirectory_home_prefix_is_stripped() {
+		$filter = static fn() => 'http://example.org/blog';
+		add_filter( 'home_url', $filter );
+		$_SERVER['REQUEST_URI'] = '/blog/db-backup/';
+		$this->assertSame( '/db-backup', Counterprompt_Traps::current_path() );
+		$this->assertTrue( Counterprompt_Traps::is_trap( Counterprompt_Traps::current_path() ) );
+		remove_filter( 'home_url', $filter );
+	}
 }

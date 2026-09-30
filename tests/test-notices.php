@@ -46,4 +46,8 @@ class Test_Notices extends WP_UnitTestCase {
 		$this->assertSame( $comments, substr_count( $m, '-->' ) );
 		$this->assertSame( 0, preg_match( '/<!--(?:(?!-->).)*--(?!>)/s', $m ) );
 	}
+	public function test_lone_gt_preserved_in_comment() {
+		update_option( 'counterprompt_options', [ 'notice_attribution' => '/a > /b' ] );
+		$this->assertStringContainsString( '/a > /b', Counterprompt_Notices::footer_markup() );
+	}
 }

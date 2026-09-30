@@ -57,7 +57,7 @@ class Test_Admin extends WP_UnitTestCase {
 		Counterprompt_Log::install();
 		// Simulate recent events all from a Cloudflare-range truncated IP.
 		global $wpdb;
-		for ( $i = 0; $i < 5; $i++ ) { // proxy_misconfigured() requires >= 5 recent events.
+		for ( $i = 0; $i < 3; $i++ ) { // proxy_misconfigured() requires >= 3 recent events.
 			$wpdb->insert( Counterprompt_Log::table(), [ 'ts' => gmdate('Y-m-d H:i:s'), 'event' => 'trap_hit', 'ip_hash' => str_repeat('a',64), 'ip_trunc' => '173.245.48.0', 'path' => '/x' . $i ] );
 		}
 		$this->assertTrue( Counterprompt_Admin::proxy_misconfigured() );
@@ -106,5 +106,16 @@ class Test_Admin extends WP_UnitTestCase {
 		Counterprompt_Detector::flag( '203.0.113.9' );
 		$res = Counterprompt_Rest::apply( new WP_REST_Response( [ 'a' => 1 ] ), new WP_REST_Request( 'GET', '/wp/v2/posts' ) );
 		$this->assertSame( [ 'a' => 1 ], $res->get_data() );
+	}
+	public function test_proxy_not_misconfigured_below_min_events() {
+		update_option( 'counterprompt_options', [ 'proxy_header' => '' ] );
+		Counterprompt_Log::install();
+		global $wpdb;
+		$wpdb->query( 'DELETE FROM ' . Counterprompt_Log::table() );
+		for ( $i = 0; $i < 2; $i++ ) {
+			$wpdb->insert( Counterprompt_Log::table(), [ 'ts' => gmdate('Y-m-d H:i:s'), 'event' => 'trap_hit', 'ip_hash' => str_repeat('a',64), 'ip_trunc' => '173.245.48.0', 'path' => '/x' . $i ] );
+		}
+		delete_transient( 'cp_proxy_mis' );
+		$this->assertFalse( Counterprompt_Admin::proxy_misconfigured() );
 	}
 }

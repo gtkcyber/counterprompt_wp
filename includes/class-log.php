@@ -51,8 +51,8 @@ class Counterprompt_Log {
 			'event'    => substr( $event, 0, 32 ),
 			'ip_hash'  => $hash,
 			'ip_trunc' => Counterprompt_Detector::ip_trunc( $ip ),
-			'path'     => substr( $path, 0, 255 ),
-			'ua'       => substr( isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '', 0, 255 ),
+			'path'     => mb_strcut( $path, 0, 255, 'UTF-8' ),
+			'ua'       => mb_strcut( isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '', 0, 255, 'UTF-8' ),
 			'meta'     => $meta ? wp_json_encode( $meta ) : null,
 		);
 		$ok  = $wpdb->insert( self::table(), $row );

@@ -47,7 +47,7 @@ class Counterprompt_Notices {
 	private static function comment_safe( string $text ): string {
 		do {
 			$prev = $text;
-			$text = preg_replace( '/--|<\/?body|<!|>/i', '', $text );
+			$text = preg_replace( '/--|<\/?body|<!/i', '', $text );
 		} while ( $text !== $prev );
 		return trim( $text );
 	}

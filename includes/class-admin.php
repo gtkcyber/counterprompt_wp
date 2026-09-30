@@ -40,6 +40,36 @@ class Counterprompt_Admin {
 	public static function register(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
 		add_action( 'admin_init', array( __CLASS__, 'settings' ) );
+		add_action( 'admin_post_counterprompt_selftest', array( __CLASS__, 'selftest' ) );
+	}
+
+	public static function apache_detected(): bool {
+		$sw = isset( $_SERVER['SERVER_SOFTWARE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['SERVER_SOFTWARE'] ) ) : '';
+		return false !== stripos( $sw, 'Apache' ) || false !== stripos( $sw, 'LiteSpeed' );
+	}
+
+	/** Loopback self-test: requests a bait path with a one-time token and checks that the plugin answered it. */
+	public static function selftest(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'counterprompt' ), 403 );
+		}
+		check_admin_referer( 'counterprompt_selftest' );
+		$token = wp_generate_password( 24, false );
+		set_transient( 'cp_selftest_token', $token, MINUTE_IN_SECONDS );
+		$resp   = wp_remote_get(
+			add_query_arg( 'cp_selftest', $token, home_url( '/.env.bak' ) ),
+			array(
+				'timeout'     => 5,
+				'redirection' => 0,
+			)
+		);
+		$result = 'error';
+		if ( ! is_wp_error( $resp ) ) {
+			$result = wp_remote_retrieve_header( $resp, 'x-counterprompt-selftest' ) ? 'ok' : 'fail';
+		}
+		delete_transient( 'cp_selftest_token' );
+		wp_safe_redirect( add_query_arg( 'cp_selftest_result', $result, admin_url( 'options-general.php?page=counterprompt' ) ) );
+		exit;
 	}
 
 	public static function menu(): void {
@@ -154,6 +184,14 @@ class Counterprompt_Admin {
 		$val  = Counterprompt_Settings::instance()->get( $key );
 		$id   = 'cp_' . $key;
 		$name = 'counterprompt_options[' . $key . ']';
+		if ( 'server_rules_apache' === $key && ! self::apache_detected() ) {
+			// Not Apache/LiteSpeed: hide the checkbox but keep the stored value so saving never resets it.
+			if ( ! empty( $val ) ) {
+				printf( '<input type="hidden" name="%s" value="1" />', esc_attr( $name ) );
+			}
+			echo '<p class="description">' . esc_html__( 'Apache not detected. Use the nginx snippet below.', 'counterprompt' ) . '</p>';
+			return;
+		}
 		switch ( $f[1] ) {
 			case 'checkbox':
 				printf( '<input type="checkbox" id="%s" name="%s" value="1"%s />', esc_attr( $id ), esc_attr( $name ), checked( ! empty( $val ), true, false ) );
@@ -188,7 +226,7 @@ class Counterprompt_Admin {
 		}
 		$rows = Counterprompt_Log::recent( 20 );
 		$mis  = false;
-		if ( count( $rows ) >= 5 ) {
+		if ( count( $rows ) >= 3 ) {
 			$hits = 0;
 			foreach ( $rows as $r ) {
 				if ( Counterprompt_Detector::ip_in_cidrs( (string) $r['ip_trunc'], self::PROXY_RANGES ) ) {
@@ -217,6 +255,18 @@ class Counterprompt_Admin {
 			echo '<div class="notice notice-warning"><p>' . esc_html__( 'Author enumeration is treated as a trap. Real unauthenticated visitors who follow an old ?author=N link will be flagged.', 'counterprompt' ) . '</p></div>';
 		}
 
+		if ( '1' === get_transient( 'cp_rules_write_failed' ) ) {
+			echo '<div class="notice notice-error"><p>' . esc_html__( 'Counterprompt could not write the .htaccess rules (file not writable). Add the rules manually or fix permissions.', 'counterprompt' ) . '</p></div>';
+		}
+		$st = isset( $_GET['cp_selftest_result'] ) ? sanitize_key( wp_unslash( $_GET['cp_selftest_result'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification -- display only.
+		if ( 'ok' === $st ) {
+			echo '<div class="notice notice-success"><p>' . esc_html__( 'Self-test passed: bait paths reach WordPress.', 'counterprompt' ) . '</p></div>';
+		} elseif ( 'fail' === $st ) {
+			echo '<div class="notice notice-warning"><p>' . esc_html__( 'Self-test failed: the bait path did not reach the plugin. Enable pretty permalinks or the server rules.', 'counterprompt' ) . '</p></div>';
+		} elseif ( 'error' === $st ) {
+			echo '<div class="notice notice-warning"><p>' . esc_html__( 'Self-test could not complete: the loopback request failed.', 'counterprompt' ) . '</p></div>';
+		}
+
 		$rows = Counterprompt_Log::recent( 20 );
 		echo '<h2>' . esc_html__( 'Recent activity', 'counterprompt' ) . '</h2><table class="widefat"><thead><tr><th>Time</th><th>Event</th><th>Path</th><th>UA</th><th>Source</th></tr></thead><tbody>';
 		if ( ! $rows ) {
@@ -237,6 +287,14 @@ class Counterprompt_Admin {
 		settings_fields( 'counterprompt' );
 		do_settings_sections( 'counterprompt' );
 		submit_button();
+		echo '</form>';
+		echo '<h2>' . esc_html__( 'Server rules', 'counterprompt' ) . '</h2>';
+		echo '<p>' . esc_html__( 'nginx: paste this into your server block (nginx cannot be configured from WordPress).', 'counterprompt' ) . '</p>';
+		echo '<textarea readonly rows="10" class="large-text code" onclick="this.select()">' . esc_textarea( Counterprompt_Server_Rules::nginx_snippet() ) . '</textarea>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<input type="hidden" name="action" value="counterprompt_selftest" />';
+		wp_nonce_field( 'counterprompt_selftest' );
+		submit_button( __( 'Test bait routing', 'counterprompt' ), 'secondary', 'submit', false );
 		echo '</form></div>';
 	}
 }

@@ -42,6 +42,7 @@ register_deactivation_hook(
 	COUNTERPROMPT_FILE,
 	function () {
 		wp_clear_scheduled_hook( 'counterprompt_daily' );
+		Counterprompt_Server_Rules::remove();
 	}
 );
 add_action( 'counterprompt_daily', array( 'Counterprompt_Log', 'prune' ) );
@@ -50,6 +51,7 @@ add_action(
 	'plugins_loaded',
 	function () {
 		Counterprompt_Settings::instance();
+		Counterprompt_Server_Rules::register_toggle();
 		if ( is_admin() ) {
 			Counterprompt_Admin::register();
 		}

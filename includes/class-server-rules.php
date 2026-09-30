@@ -65,6 +65,40 @@ class Counterprompt_Server_Rules {
 		return in_array( $p, self::bait_paths(), true ) ? $p : '';
 	}
 
+	/** Apply the server_rules_apache setting on an actual false<->true transition. Never fatal. */
+	public static function register_toggle(): void {
+		add_action( 'update_option_counterprompt_options', array( __CLASS__, 'on_update' ), 10, 2 );
+		add_action(
+			'add_option_counterprompt_options',
+			static function ( $option, $value ) {
+				self::on_update( array(), $value );
+			},
+			10,
+			2
+		);
+	}
+
+	public static function on_update( $old_value, $new_value ): void {
+		$was = is_array( $old_value ) && ! empty( $old_value['server_rules_apache'] );
+		$now = is_array( $new_value ) && ! empty( $new_value['server_rules_apache'] );
+		if ( $was === $now ) {
+			return;
+		}
+		if ( $now ) {
+			$ok = self::write();
+			set_transient( 'cp_rules_write_failed', $ok ? '0' : '1', HOUR_IN_SECONDS );
+		} else {
+			self::remove();
+			delete_transient( 'cp_rules_write_failed' );
+		}
+	}
+
+	/** One-time token for the admin self-test; the trap handler answers it without flagging or logging. */
+	public static function selftest_token_valid( $value ): bool {
+		$tok = get_transient( 'cp_selftest_token' );
+		return is_string( $value ) && is_string( $tok ) && '' !== $tok && hash_equals( $tok, $value );
+	}
+
 	public static function boot(): void {
 		// Register bait paths as traps (filter only; robots.txt reads the setting, so they are not advertised).
 		add_filter( 'counterprompt_trap_paths', static fn( $p ) => array_merge( (array) $p, self::bait_paths() ) );

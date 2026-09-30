@@ -32,4 +32,11 @@ class Test_Log extends WP_UnitTestCase {
 		Counterprompt_Log::record( 'flagged', '/db-backup/' );
 		$this->assertSame( 'flagged', $seen['event'] );
 	}
+	public function test_record_does_not_split_multibyte_at_boundary() {
+		Counterprompt_Log::install();
+		Counterprompt_Log::record( 'trap_hit', '/' . str_repeat( 'a', 253 ) . "\u{00e9}\u{00e9}" );
+		$rows = Counterprompt_Log::recent( 1 );
+		$this->assertTrue( mb_check_encoding( $rows[0]['path'], 'UTF-8' ) );
+		$this->assertLessThanOrEqual( 255, strlen( $rows[0]['path'] ) );
+	}
 }
