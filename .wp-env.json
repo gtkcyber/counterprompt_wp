@@ -1,0 +1,8 @@
+{
+	"core": "WordPress/WordPress#6.5",
+	"plugins": [ "." ],
+	"config": { "WP_DEBUG": true },
+	"env": {
+		"tests": { "config": { "WP_DEBUG": true } }
+	}
+}
